@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trans Kothe – Estacionamento 3D</title>
+<style>
+:root{--bg:#eef1f5;--fg:#1b2430;--card:#ffffffd9;--bd:#c5ccd6;--ac:#1f5fbf;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181e;--fg:#e8edf4;--card:#1e252ed9;--bd:#3a4452;--ac:#6fa3ff}}
+:root[data-theme="dark"]{--bg:#14181e;--fg:#e8edf4;--card:#1e252ed9;--bd:#3a4452;--ac:#6fa3ff}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+#c{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+.top{position:fixed;left:10px;right:10px;top:calc(env(safe-area-inset-top,0px) + 8px);background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:8px 12px;font-size:13px;line-height:1.35;pointer-events:none}
+.top b{font-size:14px}
+.bar{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+button{font:inherit;font-size:14px;color:var(--fg);background:var(--card);border:1px solid var(--bd);border-radius:999px;padding:9px 14px;min-height:40px}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="top"><b>Trans Kothe – Estacionamento 3D</b><br>14 vagas cobertas (V01–V14) · 27 vagas de carro · 51 de moto · 48,00 m. Arraste para girar, pinça ou roda para zoom.</div>
+<div class="bar" id="bar"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+var W=2.69, R=6, COR=5;
+var cv=document.getElementById('c');
+var renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+var scene=new THREE.Scene();
+var dark=matchMedia('(prefers-color-scheme:dark)').matches;
+scene.background=new THREE.Color(dark?0x14181e:0xeef1f5);
+var cam=new THREE.PerspectiveCamera(40,1,0.5,400);
+scene.add(new THREE.AmbientLight(0xffffff,0.75));
+var sun=new THREE.DirectionalLight(0xffffff,0.7);sun.position.set(20,40,-15);scene.add(sun);
+
+function box(w,h,d,col,x,y,z,parent){
+  var m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:col}));
+  m.position.set(x,y,z);(parent||scene).add(m);return m;
+}
+// Piso
+box(54,0.2,24,0x3b3f45,24,-0.1,8.5);
+// Faixas
+var pts=[];
+function ln(x1,z1,x2,z2){pts.push(x1,0.02,z1,x2,0.02,z2);}
+var xe=14*W;
+for(var i=0;i<=14;i++)ln(i*W,0,i*W,R);
+ln(0,0,xe,0);ln(0,R,xe,R);
+var z2=R+COR, x2=W;
+for(i=0;i<=13;i++)ln(x2+i*W,z2,x2+i*W,z2+R);
+ln(x2,z2,xe,z2);ln(x2,z2+R,xe,z2+R);
+var cols=[[xe+1.5,1.82],[xe+1.5+1.82+1.5,1.82],[xe+1.5+1.82+1.5+1.82+1.5,2.2]];
+cols.forEach(function(c){
+  for(var j=0;j<=17;j++)ln(c[0],j,c[0]+c[1],j);
+  ln(c[0],0,c[0],17);ln(c[0]+c[1],0,c[0]+c[1],17);
+});
+var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+scene.add(new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xffffff})));
+// Sinalização do corredor central
+box(xe+0.4,0.01,COR-0.4,0x4a4f57,xe/2,0.01,R+COR/2);
+
+// Cobertura metálica + placas solares sobre V01–V14
+var steel=0x8a95a3;
+var ks=[0,3,6,9,12,14];
+ks.forEach(function(k){
+  [[0.12,3.0],[R-0.12,3.6]].forEach(function(p){box(0.22,p[1],0.22,steel,k*W,p[1]/2,p[0]);});
+  var h=(3.6+3.0)/2+0.05;
+  var beam=box(0.18,0.2,R+0.4,steel,k*W,h,R/2);
+  beam.rotation.x=-Math.atan(0.6/R);
+});
+box(xe,0.22,0.18,steel,xe/2,3.05,0.12);
+box(xe,0.22,0.18,steel,xe/2,3.65,R-0.12);
+var roof=new THREE.Group();roof.position.set(0,3.4,R/2);roof.rotation.x=-Math.atan(0.6/R);scene.add(roof);
+for(i=0;i<14;i++)for(var r=0;r<3;r++){
+  box(W-0.12,0.07,R/3-0.12,0x1d3f7a,i*W+W/2,0.15,(r-1)*(R/3),roof);
+}
+// Rótulos
+function label(t,x,y,z,s,col){
+  var c=document.createElement('canvas');c.width=512;c.height=128;var x2d=c.getContext('2d');
+  x2d.font='bold 56px sans-serif';x2d.textAlign='center';x2d.textBaseline='middle';
+  x2d.lineWidth=10;x2d.strokeStyle='rgba(0,0,0,.6)';x2d.strokeText(t,256,64);
+  x2d.fillStyle=col||'#fff';x2d.fillText(t,256,64);
+  var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false}));
+  sp.scale.set(s*4,s,1);sp.position.set(x,y,z);scene.add(sp);
+}
+label('V01–V14 · Cobertura solar',xe/2,5.2,R/2,2.2,'#ffd45a');
+label('V15–V27',x2+13*W/2,0.6,z2+R/2,1.8);
+label('Corredor central 5,00 m',xe/2,0.6,R+COR/2,1.8);
+label('M01–M17',cols[0][0]+0.9,0.6,8.5,1.5);
+label('M18–M34',cols[1][0]+0.9,0.6,8.5,1.5);
+label('M35–M51',cols[2][0]+1.1,0.6,8.5,1.5);
+
+// Câmera orbital
+var T=new THREE.Vector3(24,1.5,8.5);
+var s={th:-0.7,ph:1.0,r:75},g2={th:-0.7,ph:1.0,r:75};
+var views={'Isométrica':[-0.7,1.0,75],'Planta':[0,0.02,68],'Frontal':[0,1.5,75],'Lateral':[1.5708,1.5,70]};
+var bar=document.getElementById('bar'),btns={};
+Object.keys(views).forEach(function(n){
+  var b=document.createElement('button');b.textContent=n;b.onclick=function(){set(n)};bar.appendChild(b);btns[n]=b;
+});
+function set(n){var v=views[n];g2.th=v[0];g2.ph=v[1];g2.r=v[2];for(var k in btns)btns[k].className=k===n?'on':'';}
+set('Isométrica');
+var drag=null,pts2={},pd=0;
+cv.addEventListener('pointerdown',function(e){cv.setPointerCapture(e.pointerId);pts2[e.pointerId]=[e.clientX,e.clientY];drag=[e.clientX,e.clientY];});
+cv.addEventListener('pointerup',function(e){delete pts2[e.pointerId];drag=null;pd=0;});
+cv.addEventListener('pointermove',function(e){
+  if(!pts2[e.pointerId])return;
+  var ids=Object.keys(pts2);
+  if(ids.length===2){
+    pts2[e.pointerId]=[e.clientX,e.clientY];
+    var a=pts2[ids[0]],b=pts2[ids[1]],d=Math.hypot(a[0]-b[0],a[1]-b[1]);
+    if(pd){g2.r=Math.max(15,Math.min(140,g2.r*pd/d));}
+    pd=d;return;
+  }
+  g2.th-=(e.clientX-pts2[e.pointerId][0])*0.006;
+  g2.ph=Math.max(0.02,Math.min(1.55,g2.ph-(e.clientY-pts2[e.pointerId][1])*0.006));
+  pts2[e.pointerId]=[e.clientX,e.clientY];
+  for(var k in btns)btns[k].className='';
+});
+cv.addEventListener('wheel',function(e){e.preventDefault();g2.r=Math.max(15,Math.min(140,g2.r*(1+e.deltaY*0.001)));},{passive:false});
+function resize(){var w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+function loop(){
+  s.th+=(g2.th-s.th)*0.12;s.ph+=(g2.ph-s.ph)*0.12;s.r+=(g2.r-s.r)*0.12;
+  var asp=cam.aspect<1?1.8:1;
+  var r=s.r*asp;
+  cam.position.set(T.x+r*Math.sin(s.ph)*Math.sin(s.th),T.y+r*Math.cos(s.ph),T.z+r*Math.sin(s.ph)*Math.cos(s.th));
+  cam.lookAt(T);renderer.render(scene,cam);requestAnimationFrame(loop);
+}
+loop();
+})();
+</script>
+</body>
+</html>
